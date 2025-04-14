@@ -1,16 +1,6 @@
 # Ignore node modules
-node_modules/
+node_modules
 
 # Ignore environment variables
 .env
 
-# Ignore log files
-logs
-*.log
-
-# Ignore build output (optional)
-dist/
-build/
-
-# Ignore system files
-.DS_Store
