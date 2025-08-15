@@ -1,47 +1,51 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import http from 'http';
+import { Server } from 'socket.io';
 import connectDB from './config/db.js';
-import {removeUnverifiedAccounts} from "./automation/removeUnverifiedAccounts.js"
 import springRoutes from './routes/springRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import chatbotRoutes from './routes/chatBotRoute.js';
+import adminRoutes from "./routes/adminRoute.js"
+import { removeUnverifiedAccounts } from './automation/removeUnverifiedAccounts.js';
 
 dotenv.config();
 const app = express();
-const frontend = process.env.FRONTEND_URL;
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+  },
+});
 
+connectDB();
 
-//! Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-
-//! to allow frontend to access uploaded images:
 app.use('/uploads', express.static('uploads'));
 
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+}));
 
-//! used to connect with frontend (react)
-const corsOptions = {
-    origin: frontend,  // react's port number
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
-}
-app.use(cors(corsOptions));
-
+// Attach io to app
+app.set('io', io);
 
 // Routes
 app.use('/api/v1/springs', springRoutes);
 app.use('/api/v1/user', authRoutes);
 app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/chat', chatbotRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
-
-//! this will remove the unverified user accounts at each 30 minute
+// Background jobs
 removeUnverifiedAccounts();
 
-//! Start Server
+// Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    connectDB(); 
-    console.log(`Server is running on port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
